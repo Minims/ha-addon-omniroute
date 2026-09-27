@@ -33,4 +33,6 @@ schema:
   memory_mb: "int(512,7168)"
   require_api_key: bool
   log_to_file: bool
-  headroom_url: "url?"
+  # An empty value means use OmniRoute's bundled compression engines.
+  # Home Assistant's `url` validator rejects an empty default value.
+  headroom_url: str
