@@ -19,9 +19,9 @@ INITIAL_PASSWORD="$(jq -er '.initial_password | select(type == "string" and leng
 PUBLIC_URL="$(jq -r '.public_url // empty' "$OPTIONS_FILE")"
 MEMORY_MB="$(jq -er '.memory_mb // 3072 | select(type == "number" and . >= 512 and . <= 7168)' "$OPTIONS_FILE")" \
   || fail "'memory_mb' must be an integer between 512 and 7168."
-REQUIRE_API_KEY="$(jq -er '.require_api_key // true | select(type == "boolean")' "$OPTIONS_FILE")" \
+REQUIRE_API_KEY="$(jq -r 'if .require_api_key == null then true elif (.require_api_key | type) == "boolean" then .require_api_key else error("must be a boolean") end' "$OPTIONS_FILE")" \
   || fail "'require_api_key' must be a boolean."
-LOG_TO_FILE="$(jq -er '.log_to_file // false | select(type == "boolean")' "$OPTIONS_FILE")" \
+LOG_TO_FILE="$(jq -r 'if .log_to_file == null then false elif (.log_to_file | type) == "boolean" then .log_to_file else error("must be a boolean") end' "$OPTIONS_FILE")" \
   || fail "'log_to_file' must be a boolean."
 HEADROOM_URL="$(jq -r '.headroom_url // empty' "$OPTIONS_FILE")"
 
@@ -29,15 +29,15 @@ mkdir -p /data/home
 chown -R "$NODE_UID:$NODE_GID" /data
 chmod 700 /data
 
-if [ -f "$SECRETS_FILE" ]; then
+if [ -f "$SQLITE_DB" ] && [ ! -f "$SECRETS_FILE" ]; then
+  fail "$SQLITE_DB exists but $SECRETS_FILE is missing. Restore both from the same backup; new secrets would make encrypted data unreadable."
+elif [ -f "$SECRETS_FILE" ]; then
   JWT_SECRET="$(jq -er '.jwt_secret | select(type == "string" and length > 0)' "$SECRETS_FILE")" \
     || fail "$SECRETS_FILE has no usable jwt_secret."
   API_KEY_SECRET="$(jq -er '.api_key_secret | select(type == "string" and length > 0)' "$SECRETS_FILE")" \
     || fail "$SECRETS_FILE has no usable api_key_secret."
   STORAGE_ENCRYPTION_KEY="$(jq -er '.storage_encryption_key | select(type == "string" and length > 0)' "$SECRETS_FILE")" \
     || fail "$SECRETS_FILE has no usable storage_encryption_key."
-elif [ -f "$SQLITE_DB" ]; then
-  fail "$SQLITE_DB exists but $SECRETS_FILE is missing. Restore both from the same backup; new secrets would make encrypted data unreadable."
 else
   echo "[ha-omniroute] First boot: generating persistent encryption secrets."
   JWT_SECRET="$(openssl rand -base64 48)"

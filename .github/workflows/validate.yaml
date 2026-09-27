@@ -27,6 +27,14 @@ jobs:
       - name: Check git diff whitespace
         run: git diff --check HEAD~1..HEAD
 
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and test persistent runtime
+        run: tests/entrypoint-test.sh
+
   upstream-arm64:
     runs-on: ubuntu-latest
     steps:
