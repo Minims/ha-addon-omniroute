@@ -1,0 +1,36 @@
+name: OmniRoute
+version: "3.8.50"
+slug: omniroute
+description: >-
+  AI coding proxy — OpenAI-compatible API, dashboard, and web providers.
+  Runs OmniRoute with Chromium for browser-requiring providers.
+url: https://github.com/Minims/ha-addon-omniroute
+arch:
+  - aarch64
+image: ghcr.io/minims/ha-addon-omniroute
+init: false
+timeout: 60
+startup: application
+boot: manual
+ports:
+  20128/tcp: 20128
+ports_description:
+  20128/tcp: OmniRoute API & Dashboard
+webui: "http://[HOST]:[PORT:20128]"
+watchdog: "http://[HOST]:[PORT:20128]/healthz"
+backup: cold
+stage: experimental
+options:
+  initial_password: ""
+  public_url: "http://192.168.1.10:20128"
+  memory_mb: 3072
+  require_api_key: true
+  log_to_file: false
+  headroom_url: ""
+schema:
+  initial_password: password
+  public_url: url
+  memory_mb: "int(512,7168)"
+  require_api_key: bool
+  log_to_file: bool
+  headroom_url: "url?"

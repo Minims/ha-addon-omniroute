@@ -1,0 +1,31 @@
+configuration:
+  initial_password:
+    name: Initial password
+    description: >-
+      Dashboard administrator password for first login. Change it in
+      Dashboard → Settings → Security after signing in.
+  public_url:
+    name: Public URL
+    description: >-
+      URL used for OAuth callbacks and redirects. Use the Pi LAN address,
+      for example http://192.168.1.10:20128.
+  memory_mb:
+    name: Memory limit (MB)
+    description: >-
+      Node.js heap limit in megabytes. The 3072 MB default leaves memory for
+      Home Assistant OS and Chromium on an 8 GB Raspberry Pi 5.
+  require_api_key:
+    name: Require API key
+    description: Require a valid API key for every /v1/* inference request.
+  log_to_file:
+    name: Log to file
+    description: >-
+      Write application logs to /data/logs. Disabled by default to reduce SSD
+      writes.
+  headroom_url:
+    name: Headroom proxy URL (advanced)
+    description: >-
+      Optional external Headroom token-saver proxy. Leave empty to use the
+      bundled compression engines.
+network:
+  20128/tcp: OmniRoute API & Dashboard

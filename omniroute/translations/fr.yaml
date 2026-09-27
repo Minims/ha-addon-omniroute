@@ -1,0 +1,31 @@
+configuration:
+  initial_password:
+    name: Mot de passe initial
+    description: >-
+      Mot de passe administrateur du tableau de bord pour la première connexion.
+      Modifiez-le dans Tableau de bord → Paramètres → Sécurité après connexion.
+  public_url:
+    name: URL publique
+    description: >-
+      URL utilisée pour les callbacks OAuth et les redirections. Utilisez
+      l'adresse LAN du Pi, par exemple http://192.168.1.10:20128.
+  memory_mb:
+    name: Limite mémoire (Mo)
+    description: >-
+      Limite du heap Node.js en mégaoctets. Les 3072 Mo par défaut laissent de
+      la mémoire à Home Assistant OS et Chromium sur un Raspberry Pi 5 de 8 Go.
+  require_api_key:
+    name: Exiger une clé API
+    description: Exige une clé API valide pour chaque requête d'inférence /v1/*.
+  log_to_file:
+    name: Journaliser dans un fichier
+    description: >-
+      Écrit les logs applicatifs dans /data/logs. Désactivé par défaut afin de
+      limiter les écritures SSD.
+  headroom_url:
+    name: URL du proxy Headroom (avancé)
+    description: >-
+      Proxy Headroom externe optionnel pour économiser des tokens. Laissez vide
+      pour utiliser les moteurs de compression intégrés.
+network:
+  20128/tcp: API et tableau de bord OmniRoute
