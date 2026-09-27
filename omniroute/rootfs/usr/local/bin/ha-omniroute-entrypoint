@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+OPTIONS_FILE=/data/options.json
+SECRETS_FILE=/data/.haos-secrets.json
+SQLITE_DB=/data/storage.sqlite
+NODE_UID=1000
+NODE_GID=1000
+
+fail() {
+  echo "[ha-omniroute] ERROR: $*" >&2
+  exit 1
+}
+
+[ -f "$OPTIONS_FILE" ] || fail "$OPTIONS_FILE not found."
+
+INITIAL_PASSWORD="$(jq -er '.initial_password | select(type == "string" and length > 0)' "$OPTIONS_FILE")" \
+  || fail "'initial_password' is required in add-on configuration."
+PUBLIC_URL="$(jq -r '.public_url // empty' "$OPTIONS_FILE")"
+MEMORY_MB="$(jq -er '.memory_mb // 3072 | select(type == "number" and . >= 512 and . <= 7168)' "$OPTIONS_FILE")" \
+  || fail "'memory_mb' must be an integer between 512 and 7168."
+REQUIRE_API_KEY="$(jq -er '.require_api_key // true | select(type == "boolean")' "$OPTIONS_FILE")" \
+  || fail "'require_api_key' must be a boolean."
+LOG_TO_FILE="$(jq -er '.log_to_file // false | select(type == "boolean")' "$OPTIONS_FILE")" \
+  || fail "'log_to_file' must be a boolean."
+HEADROOM_URL="$(jq -r '.headroom_url // empty' "$OPTIONS_FILE")"
+
+mkdir -p /data/home
+chown -R "$NODE_UID:$NODE_GID" /data
+chmod 700 /data
+
+if [ -f "$SECRETS_FILE" ]; then
+  JWT_SECRET="$(jq -er '.jwt_secret | select(type == "string" and length > 0)' "$SECRETS_FILE")" \
+    || fail "$SECRETS_FILE has no usable jwt_secret."
+  API_KEY_SECRET="$(jq -er '.api_key_secret | select(type == "string" and length > 0)' "$SECRETS_FILE")" \
+    || fail "$SECRETS_FILE has no usable api_key_secret."
+  STORAGE_ENCRYPTION_KEY="$(jq -er '.storage_encryption_key | select(type == "string" and length > 0)' "$SECRETS_FILE")" \
+    || fail "$SECRETS_FILE has no usable storage_encryption_key."
+elif [ -f "$SQLITE_DB" ]; then
+  fail "$SQLITE_DB exists but $SECRETS_FILE is missing. Restore both from the same backup; new secrets would make encrypted data unreadable."
+else
+  echo "[ha-omniroute] First boot: generating persistent encryption secrets."
+  JWT_SECRET="$(openssl rand -base64 48)"
+  API_KEY_SECRET="$(openssl rand -hex 32)"
+  STORAGE_ENCRYPTION_KEY="$(openssl rand -hex 32)"
+  temp_file="$(mktemp "${SECRETS_FILE}.XXXXXX")"
+  umask 077
+  jq -n \
+    --arg jwt_secret "$JWT_SECRET" \
+    --arg api_key_secret "$API_KEY_SECRET" \
+    --arg storage_encryption_key "$STORAGE_ENCRYPTION_KEY" \
+    --arg created_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{jwt_secret: $jwt_secret, api_key_secret: $api_key_secret, storage_encryption_key: $storage_encryption_key, created_at: $created_at}' \
+    > "$temp_file"
+  chown "$NODE_UID:$NODE_GID" "$temp_file"
+  chmod 600 "$temp_file"
+  mv "$temp_file" "$SECRETS_FILE"
+fi
+
+export DATA_DIR=/data
+export HOME=/data/home
+export JWT_SECRET API_KEY_SECRET STORAGE_ENCRYPTION_KEY INITIAL_PASSWORD
+export NODE_ENV=production
+export PORT=20128
+export HOSTNAME=0.0.0.0
+export OMNIROUTE_MEMORY_MB="$MEMORY_MB"
+export REQUIRE_API_KEY="$REQUIRE_API_KEY"
+export OMNIROUTE_PUBLIC_URL="$PUBLIC_URL"
+[ -z "$HEADROOM_URL" ] || export HEADROOM_URL
+
+if [ "$LOG_TO_FILE" = true ]; then
+  install -d -o "$NODE_UID" -g "$NODE_GID" -m 0700 /data/logs/application
+  export APP_LOG_FILE_PATH=/data/logs/application/app.log
+fi
+
+# Let the upstream standalone launcher derive NODE_OPTIONS from
+# OMNIROUTE_MEMORY_MB, then run it as the unprivileged node user.
+echo "[ha-omniroute] Starting OmniRoute: DATA_DIR=/data PORT=20128 MEMORY=${MEMORY_MB}MB"
+exec gosu "$NODE_UID:$NODE_GID" "$@"

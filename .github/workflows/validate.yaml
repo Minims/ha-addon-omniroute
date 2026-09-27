@@ -1,0 +1,39 @@
+name: Validate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  configuration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate YAML and required metadata
+        run: |
+          ruby -e 'require "yaml"; %w[repository.yaml omniroute/config.yaml omniroute/translations/en.yaml omniroute/translations/fr.yaml].each { |file| YAML.load_file(file) }'
+          for field in name version slug description arch image; do
+            grep -q "^$field:" omniroute/config.yaml
+          done
+          grep -A1 '^arch:' omniroute/config.yaml | grep -qx '  - aarch64'
+          test "$(sed -n 's/^version: "\{0,1\}\([^"[:space:]]*\)"\{0,1\}$/\1/p' omniroute/config.yaml)" = "$(sed -n 's/^ARG OMNIROUTE_VERSION="\(.*\)-web"$/\1/p' omniroute/Dockerfile)"
+
+      - name: Validate entrypoint syntax
+        run: bash -n omniroute/rootfs/usr/local/bin/ha-omniroute-entrypoint
+
+      - name: Check git diff whitespace
+        run: git diff --check HEAD~1..HEAD
+
+  upstream-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify the upstream image supports arm64
+        run: |
+          version=$(sed -n 's/^ARG OMNIROUTE_VERSION="\(.*\)"$/\1/p' omniroute/Dockerfile)
+          docker manifest inspect "diegosouzapw/omniroute:$version" \
+            | jq -e '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "arm64")'

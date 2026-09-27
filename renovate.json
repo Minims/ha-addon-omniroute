@@ -1,0 +1,16 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "packageRules": [
+    {
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["diegosouzapw/omniroute"],
+      "matchCurrentValue": "/^\\d+\\.\\d+\\.\\d+-web$/",
+      "extractVersion": "^(?<version>\\d+\\.\\d+\\.\\d+)-web$",
+      "versioning": "semver",
+      "automerge": false,
+      "labels": ["omniroute-update"],
+      "prConcurrentLimit": 1
+    }
+  ]
+}
