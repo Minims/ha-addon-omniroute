@@ -41,8 +41,8 @@ for _ in $(seq 1 30); do
 done
 
 test "$(docker inspect --format '{{.State.Health.Status}}' "$container_name")" = healthy
-jq -e '.jwt_secret and .api_key_secret and .storage_encryption_key' "$data_dir/.haos-secrets.json" >/dev/null
-test "$(file_mode "$data_dir/.haos-secrets.json")" = "600"
+docker exec "$container_name" jq -e '.jwt_secret and .api_key_secret and .storage_encryption_key' /data/.haos-secrets.json >/dev/null
+test "$(docker exec "$container_name" stat -c '%a' /data/.haos-secrets.json)" = "600"
 docker exec "$container_name" gosu 1000:1000 node -e '
   const { chromium } = require("playwright");
   chromium.launch({ args: ["--disable-dev-shm-usage"] })
@@ -50,7 +50,7 @@ docker exec "$container_name" gosu 1000:1000 node -e '
     .catch((error) => { console.error(error); process.exit(1); });
 '
 
-secrets_checksum="$(shasum -a 256 "$data_dir/.haos-secrets.json" | cut -d ' ' -f 1)"
+secrets_checksum="$(docker exec "$container_name" sha256sum /data/.haos-secrets.json | cut -d ' ' -f 1)"
 docker rm -f "$container_name" >/dev/null
 docker run -d --name "$container_name" -p 127.0.0.1::20128 -v "$data_dir:/data" "$image_name"
 
@@ -63,7 +63,7 @@ for _ in $(seq 1 30); do
 done
 
 test "$(docker inspect --format '{{.State.Health.Status}}' "$container_name")" = healthy
-test "$secrets_checksum" = "$(shasum -a 256 "$data_dir/.haos-secrets.json" | cut -d ' ' -f 1)"
+test "$secrets_checksum" = "$(docker exec "$container_name" sha256sum /data/.haos-secrets.json | cut -d ' ' -f 1)"
 
 docker rm -f "$container_name" >/dev/null
 
