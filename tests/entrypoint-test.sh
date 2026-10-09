@@ -28,7 +28,8 @@ cat >"$data_dir/options.json" <<'JSON'
 }
 JSON
 
-docker build --build-arg BUILD_VERSION=3.8.50 -t "$image_name" omniroute
+build_version="$(sed -n 's/^version: "\{0,1\}\([^"[:space:]]*\)"\{0,1\}$/\1/p' omniroute/config.yaml)"
+docker build --build-arg BUILD_VERSION="$build_version" -t "$image_name" omniroute
 docker run -d --name "$container_name" -p 127.0.0.1::20128 -v "$data_dir:/data" "$image_name"
 
 for _ in $(seq 1 30); do
