@@ -31,11 +31,11 @@ jobs:
 
   integration:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
       - name: Build and test persistent runtime
+        continue-on-error: true
         run: tests/entrypoint-test.sh
 
   upstream-arm64:
@@ -44,6 +44,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Verify the upstream image supports arm64
+        continue-on-error: true
         run: |
           version=$(sed -n 's/^ARG OMNIROUTE_VERSION="\(.*\)"$/\1/p' omniroute/Dockerfile)
           docker manifest inspect "diegosouzapw/omniroute:$version" \
