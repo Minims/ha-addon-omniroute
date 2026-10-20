@@ -8,6 +8,10 @@ container_name="ha-omniroute-test-$$"
 
 cleanup() {
   docker rm -f "$container_name" >/dev/null 2>&1 || true
+  # The entrypoint changes bind-mount ownership to the container's node user.
+  docker run --rm --user 0 --entrypoint chown \
+    -v "$data_dir:/test-data" -v "$recovery_dir:/test-recovery" \
+    "$image_name" -R "$(id -u):$(id -g)" /test-data /test-recovery
   rm -rf "$data_dir"
   rm -rf "$recovery_dir"
 }
@@ -27,6 +31,9 @@ cat >"$data_dir/options.json" <<'JSON'
   "headroom_url": ""
 }
 JSON
+
+cp "$data_dir/options.json" "$recovery_dir/options.json"
+touch "$recovery_dir/storage.sqlite"
 
 build_version="$(sed -n 's/^version: "\{0,1\}\([^"[:space:]]*\)"\{0,1\}$/\1/p' omniroute/config.yaml)"
 docker build --build-arg BUILD_VERSION="$build_version" -t "$image_name" omniroute
@@ -66,9 +73,6 @@ test "$(docker inspect --format '{{.State.Health.Status}}' "$container_name")" =
 test "$secrets_checksum" = "$(docker exec "$container_name" sha256sum /data/.haos-secrets.json | cut -d ' ' -f 1)"
 
 docker rm -f "$container_name" >/dev/null
-
-cp "$data_dir/options.json" "$recovery_dir/options.json"
-touch "$recovery_dir/storage.sqlite"
 
 set +e
 startup_output="$(docker run --rm -v "$recovery_dir:/data" "$image_name" 2>&1)"
