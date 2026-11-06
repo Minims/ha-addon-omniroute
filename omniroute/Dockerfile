@@ -1,6 +1,6 @@
 # Pin to an exact upstream image. Renovate watches this declaration.
 # renovate: datasource=docker depName=diegosouzapw/omniroute
-ARG OMNIROUTE_VERSION="3.8.52-web"
+ARG OMNIROUTE_VERSION="3.8.53-web"
 FROM diegosouzapw/omniroute:${OMNIROUTE_VERSION}
 
 ARG BUILD_VERSION

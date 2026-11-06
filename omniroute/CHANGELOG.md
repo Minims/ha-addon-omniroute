@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.8.53 — 2026-11-06
+
+- Mise à niveau vers OmniRoute upstream 3.8.53 (`3.8.53-web`, arm64).
+- Vérification d’intégration du mot de passe administrateur fourni via `initial_password` / `INITIAL_PASSWORD`.
+
 ## 3.8.52 — 2026-10-20
 
 - Mise à niveau vers OmniRoute upstream 3.8.52 (`3.8.52-web`, arm64).

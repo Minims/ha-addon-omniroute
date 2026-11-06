@@ -39,6 +39,9 @@ build_version="$(sed -n 's/^version: "\{0,1\}\([^"[:space:]]*\)"\{0,1\}$/\1/p' o
 docker build --build-arg BUILD_VERSION="$build_version" -t "$image_name" omniroute
 docker run -d --name "$container_name" -p 127.0.0.1::20128 -v "$data_dir:/data" "$image_name"
 
+mapped_port="$(docker port "$container_name" 20128/tcp | sed -n 's/.*:\([0-9][0-9]*\)$/\1/p')"
+test -n "$mapped_port"
+
 for _ in $(seq 1 30); do
   health_status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$container_name")"
   if [ "$health_status" = healthy ]; then
@@ -48,6 +51,16 @@ for _ in $(seq 1 30); do
 done
 
 test "$(docker inspect --format '{{.State.Health.Status}}' "$container_name")" = healthy
+login_response="$(curl --fail-with-body -sS -X POST "http://127.0.0.1:${mapped_port}/api/auth/login" \
+  -H 'Content-Type: application/json' \
+  --data '{"password":"TestPassword123!"}')"
+grep -q '"success":true' <<<"$login_response"
+set +e
+wrong_password_status="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:${mapped_port}/api/auth/login" \
+  -H 'Content-Type: application/json' \
+  --data '{"password":"wrong-password"}')"
+set -e
+test "$wrong_password_status" = 401
 docker exec "$container_name" jq -e '.jwt_secret and .api_key_secret and .storage_encryption_key' /data/.haos-secrets.json >/dev/null
 test "$(docker exec "$container_name" stat -c '%a' /data/.haos-secrets.json)" = "600"
 docker exec "$container_name" gosu 1000:1000 node -e '
