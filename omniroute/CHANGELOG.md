@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.54 — 2026-11-17
+
+- Mise à niveau vers OmniRoute upstream 3.8.54 (`3.8.54-web`, arm64).
+
 ## 3.8.53 — 2026-11-06
 
 - Mise à niveau vers OmniRoute upstream 3.8.53 (`3.8.53-web`, arm64).
